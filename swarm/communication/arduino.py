@@ -1,8 +1,45 @@
 import struct
-
 from serial import Serial
 
-from .link import Link
+from .link import *
+
+
+class SendOp(OpCode):
+    NEW_GPS = b'\0'
+
+
+class RecvOp(OpCode):
+    ERROR = b'\0'
+    DEBUG = b'\1'
+    STATUS = b'\2'
+    GPS = b'\3'
+
+fmts = {
+    RecvOp.ERROR: '',
+    RecvOp.DEBUG: '',
+    RecvOp.STATUS: '',
+    RecvOp.GPS: ''
+}
+
+
+class ArduinoPacket(Packet):
+
+    def __init__(self, *data, fmt=None):
+        super(ArduinoPacket, self).__init__(*data, fmt=fmt)
+
+    def pack(self, fmt=None):
+        fmt = fmt or self.kwargs['fmt']
+        if fmt is None:
+            raise MalformedData("No fmt packed")
+        if self.code is None:
+            raise MalformedData("No OpCode packed")
+        return self.code + struct.pack(fmt, *self.data)
+
+    @classmethod
+    def unpack(cls, data):
+        fmt = fmts[RecvOp(data[0])]
+        # TODO: replace Packet unpack/pack logic with embedded functions in the enum
+
 
 
 class Arduino(Link):
