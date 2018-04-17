@@ -183,6 +183,8 @@ class Link(ABC):
         self.send_queue = queue.Queue()
         self.recv_queue = queue.Queue()
 
+        self.ready_to_send = True
+
         # threads
         self.running = False
         self.send_thread = threading.Thread(
@@ -218,8 +220,8 @@ class Link(ABC):
         while self.running:
             # Delay between sends to give arduino a chance to process
             # This is important due to small buffer size and slower processor.
-            # TODO: replace this with a 'done reading' signal flag from arduino
-            time.sleep(2)
+            while self.running and not self.ready_to_send:
+                time.sleep(0.001)
 
             try:
                 # get a packet from the queue

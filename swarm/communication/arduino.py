@@ -7,13 +7,15 @@ class SendOp(OpCode):
     NEW_GPS = b'\0'
     CONTROL = b'\1'
     FORCE_DIRECTION = b'\2'
+    MODE = b'\3'
 
 
 class RecvOp(OpCode):
-    ERROR = b'\0'
-    DEBUG = b'\1'
-    STATUS = b'\2'
-    GPS = b'\3'
+    RECEIVED = b'\0'
+    ERROR = b'\1'
+    DEBUG = b'\2'
+    STATUS = b'\3'
+    GPS = b'\4'
 
 
 class ArduinoPacket(Packet):
@@ -58,10 +60,12 @@ class ArduinoPacket(Packet):
             except KeyError:
                 raise MalformedData("No Format to pack with")
 
-            # special 'string' case and general case.
+            # special 'string' case, 'nothing' case, and general case.
             # look up struct.pack for details on fmt string
             if fmt == 'STRING':
                 self.values = [self.data[1:].decode('utf-8')]
+            elif fmt == 'NOTHING':
+                self.values = []
             else:
                 self.values = struct.unpack(fmt, self.data[1:])
 
@@ -80,6 +84,7 @@ class Arduino(Link):
 
     def write(self, packet: Packet):
         self.serial.write(packet.pack())  # get data from packet and send it
+        self.ready_to_send = False
 
     def read(self):
         b = b''  # buffer
@@ -98,45 +103,63 @@ class Arduino(Link):
         assert direction in ['stop', 'forward', 'backward', 'left', 'right', 'auto']
         return ArduinoPacket(direction)
 
-    @send_op(SendOp.CONTROL, fmt='<ff')
-    def control(self, left, right):
+    @send_op(SendOp.CONTROL, fmt='hh')
+    def control(self, left: int, right: int):
         """
-        Set the bot's wheel velocities manually. left and right are 1-100 percentages
+        Set the bot's wheel velocities manually.
+        left and right are 0-200 representing percentages. 0-99 is backward, 100 is stop, 101-200 is forward
         """
-        assert 1 < left < 100
-        assert 1 < right < 100
-        return ArduinoPacket(left / 100.0, right / 100.0)
+        assert -100 < left < 100
+        assert -100 < right < 100
+        return ArduinoPacket(left, right)
 
     @send_op(SendOp.NEW_GPS, fmt='ff')
-    def new_gps(self, lat, lon):
+    def new_gps(self, lat: float, lon: float):
         """
         Set the bot's new gps goal.
         """
         return ArduinoPacket(lat, lon)
 
+    @send_op(SendOp.MODE, fmt='h')
+    def set_mode(self, mode: int):
+        """
+        Set the bot's mode.
+        0 - NAVIGATION
+        1 - FOLLOW
+        2 - MANUAL
+        """
+        return ArduinoPacket(mode)
+
+    @recv_op(RecvOp.RECEIVED, fmt='NOTHING')
+    def command_received(self, **_):
+        """
+        The bot received a command and is ready to receive more.
+        """
+        self.ready_to_send = True
+
     @recv_op(RecvOp.DEBUG, fmt='STRING')
-    def debug(self, s, **options):
+    def debug(self, s, **_):
         """
         Received debug info from bot. Simple echo.
         """
         print("DEBUG: {}".format(s), end='', flush=True)
 
     @recv_op(RecvOp.ERROR, fmt='STRING')
-    def error(self, s, **options):
+    def error(self, s, **_):
         """
         Received error info from bot. Simple echo.
         """
         print("ERROR: {}".format(s[0]), end='', flush=True)
 
     @recv_op(RecvOp.STATUS, fmt='STRING')
-    def status(self, s, **options):
+    def status(self, s, **_):
         """
         Received status info from bot. Simple echo.
         """
         print("STATUS: {}".format(s[0]), end='', flush=True)
 
     @recv_op(RecvOp.GPS, fmt='ff')
-    def recv_gps(self, lat, lon, **options):
+    def recv_gps(self, lat, lon, **_):
         """
         Received gps info from bot. Simple echo.
         """
