@@ -124,9 +124,10 @@ class Arduino(Link):
     def set_mode(self, mode: int):
         """
         Set the bot's mode.
-        0 - NAVIGATION
-        1 - FOLLOW
-        2 - MANUAL
+        -1 - WAITING
+         0 - NAVIGATION
+         1 - FOLLOW
+         2 - MANUAL
         """
         return ArduinoPacket(mode)
 
