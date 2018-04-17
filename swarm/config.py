@@ -5,7 +5,7 @@ import yaml
 
 default = {
     'xbee': {
-        'port': '/dev/ttyUSB0', 'baud': 9600, 'addresses': []
+        'port': '/dev/ttyUSB0', 'baud': 57600, 'addresses': []
     },
     'arduino': {
         'port': '/dev/ttyUSB0', 'baud': 115200

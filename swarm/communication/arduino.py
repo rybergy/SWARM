@@ -25,23 +25,20 @@ class ArduinoPacket(Packet):
 
     def pack(self):
         if self.data is None:  # process data
-
-            # ensure we have a code
-            if self.code is None:
-                raise MalformedData("No OpCode packed")
-
             # ensure we have a format
             try:
                 fmt = self.options['fmt']
             except KeyError:
                 raise MalformedData("No Format to pack with")
 
-            # special 'string' case and general case.
+            # special 'string', and 'nothing, cases and general case.
             # look up struct.pack for details on fmt string
             if fmt == 'STRING':
-                self.data = self.code.value + self.values[0].encode('utf-8')
+                self.data = self.get_code().value + self.values[0].encode('utf-8')
+            elif fmt == 'NOTHING':
+                self.data = self.get_code().value
             else:
-                self.data = self.code.value + struct.pack(fmt, *self.values)
+                self.data = self.get_code().value + struct.pack(fmt, *self.values)
 
         # return data, whether we processed it now or earlier
         return self.data
@@ -53,7 +50,6 @@ class ArduinoPacket(Packet):
 
     def unpack(self):
         if len(self.values) == 0:  # if we have no values yet, process them
-
             # ensure we have a format
             try:
                 fmt = self.options['fmt']
@@ -109,8 +105,9 @@ class Arduino(Link):
         Set the bot's wheel velocities manually.
         left and right are 0-200 representing percentages. 0-99 is backward, 100 is stop, 101-200 is forward
         """
-        assert -100 < left < 100
-        assert -100 < right < 100
+        assert 0 < left < 200
+        assert 0 < right < 200
+        print("Control command sent to arduino: {}, {}". format(left, right))
         return ArduinoPacket(left, right)
 
     @send_op(SendOp.NEW_GPS, fmt='ff')
