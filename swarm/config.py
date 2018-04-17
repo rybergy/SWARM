@@ -8,7 +8,7 @@ default = {
         'port': '/dev/ttyUSB0', 'baud': 9600, 'addresses': []
     },
     'arduino': {
-        'port': '/dev/ttyUSB0', 'baud': 9600
+        'port': '/dev/ttyUSB0', 'baud': 115200
     }
 }
 
