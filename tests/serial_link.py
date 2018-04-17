@@ -13,6 +13,7 @@ bot.start()
 
 # main test
 time.sleep(3)
+bot.arduino.set_mode(0)
 bot.arduino.control(50, 75)
 bot.arduino.new_gps(50.14063924666028, -90.94233550243678)
 while bot.running:
