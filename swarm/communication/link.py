@@ -4,11 +4,12 @@ import time
 import queue
 import enum
 from abc import ABC, abstractmethod
+from collections import defaultdict
 
 
 class OpCode(enum.Enum):
     """
-    Descriptive names and values for OpCodes.
+    Descriptive names and values for OpCodes. Values should be Opinfo
     """
 
     @classmethod
@@ -31,39 +32,37 @@ class MalformedData(BaseException):
 
 class Packet(ABC):
     """
-    data to be sent over a Link
+    data to be sent over a Link. extract values using .values and data to be sent using .pack()
     """
 
-    code: OpCode = None
-    kwargs = {}  # passed to write as kwargs
-    data = []
+    def __init__(self, *values, data=None, code=None, **options):
+        self.options = defaultdict(lambda: None)
+        self.options.update(options)
 
-    def __init__(self, *data, **kwargs):
+        # can be set later if needed
+        self.code: OpCode = code
         self.data = data
-        self.kwargs = kwargs
+        self.values = values
 
-    @classmethod
     @abstractmethod
-    def from_data(cls):
+    def get_code(self):
         """
-        stub
+        Get and store opcode from data.
         """
 
     @abstractmethod
     def pack(self, *kwargs):
         """
-        return data to be sent in form expected by the Link
+        Return data to be sent in form expected by the Link
         :raises MalformedData: if there is an error packing
         """
 
     @abstractmethod
-    def unpack(self, *data, **kwargs):
+    def unpack(self, **kwargs):
         """
-        Process a packet into it's data. Returns a tuple of valid data.
+        Process a packet into it's values from data. updates internal values and returns them. kwargs are options.
         :raises MalformedData: if there is an error unpacking
         """
-
-threading.Thread()
 
 
 class Cycle(threading.Thread):
@@ -105,75 +104,63 @@ class Cycle(threading.Thread):
             self.link.send_queue.put(self.func())
 
 
-class Recv:
+def recv_op(code, **options):
     """
     Register a receive opcode in this Link. Usage:
     class Name(Link):
-        @Recv.op(0)
-        def func(self, packet):
+        @recv_op(OpCodes.EXAMPLE, example_option=1)
+        def func(self, x, y, z):
             # respond to the data starting with opcode 0
 
-    When opcode 0 is received, this function will be called and the data following the code is passed.
-    Note that Send is callable, and will simply pass through to the function.
+    When opcode EXAMPLEE is received, this function will be called.
+    The data interpreted according to the code is passed as arguments from Packet.unpack().
+    kwargs/options passed will be updated in the packet.
     """
-
-    @staticmethod
-    def op(code):
-        def dec(func):
-            return Recv(code, func)
-        return dec
-
-    def __init__(self, code, func):
-        self.code = code
-        self.func = func
-
-    def __call__(self, packet: Packet):
-        return self.func(packet)
+    def dec(func):
+        def f(*args):
+            args[1].options.update(options)
+            return func(args[0], *args[1].unpack(), **args[1].options)
+        f.code = code
+        return f
+    return dec
 
 
-class Send:
+def send_op(code, **options):
     """
     Register a send opcode in this Link. Usage:
     class Name(Link):
-        @Send.op(0)
+        @send_op(OpCodes.EXAMPLE, example_option=1)
         def func(self, args...):
-            # process args and return what is to be sent
+            # process args ...
+            return Packet(blah, blah, blah)
 
-    When Name.ping is called, adding the opcode and putting it in the sendqueue will be handled.
+    When Name.func is called, adding the opcode and putting it in the sendqueue will be handled.
     Func should return a Packet
+    kwargs passed will be updated in the packet.
     """
-
-    @staticmethod
-    def op(code):
-        def dec(func):
-            return Send(code, func)
-        return dec
-
-    def __init__(self, code, func):
-        self.code = code
-        self.func = func
-        try:
-            self.link: Link = func.__self__
-        except AttributeError:
-            raise TypeError("func must be a bound method of a class")
-
-    def __call__(self, *args, **kwargs):
-        data: Packet = self.func(*args, **kwargs)
-        try:
-            data.code = self.code
-        except AttributeError:
-            raise TypeError("Send function should return a Packet")
-        self.link.send_queue.put(data)
+    def dec(func):
+        def f(*args, **kwargs):
+            data: Packet = func(*args, **kwargs)
+            data.options.update(options)
+            try:
+                data.code = code
+            except AttributeError:
+                raise TypeError("Send function should return a Packet")
+            try:
+                args[0].send_queue.put(data)
+            except AttributeError:
+                raise TypeError("Send function should be a method of a class")
+        return f
+    return dec
 
 
 class Link(ABC):
     """
-    abstract base class for basic shared communication code.
+    Abstract Base Class for basic shared communication code.
     """
 
-    send_opcodes = {}
+    cycles: [Cycle] = []
     recv_opcodes = {}
-    cycles = []
 
     @abstractmethod
     async def read(self):
@@ -196,6 +183,7 @@ class Link(ABC):
         self.send_queue = queue.Queue()
         self.recv_queue = queue.Queue()
 
+        # threads
         self.running = False
         self.send_thread = threading.Thread(
             name='{}: send'.format(self.__class__.__name__),
@@ -211,11 +199,11 @@ class Link(ABC):
         )
 
         super(Link, self).__init__()
+
+        # register opcodes
         for name, member in inspect.getmembers(self):
-            if isinstance(member, Recv):
+            if hasattr(member, 'code'):
                 self.recv_opcodes[member.code] = member
-            if isinstance(member, Send):
-                self.send_opcodes[member.code] = member
 
     def recv_loop(self):
         while self.running:
@@ -223,10 +211,16 @@ class Link(ABC):
             try:
                 self.recv_queue.put(self.read())
             except TimeoutError:
+                print('{}: recv timeout'.format(self.__class__.__name__))
                 continue  # timeout to check if the thread should join
 
     def send_loop(self):
         while self.running:
+            # Delay between sends to give arduino a chance to process
+            # This is important due to small buffer size and slower processor.
+            # TODO: replace this with a 'done reading' signal flag from arduino
+            time.sleep(2)
+
             try:
                 # get a packet from the queue
                 packet = self.send_queue.get(block=True, timeout=5)
@@ -235,6 +229,7 @@ class Link(ABC):
             except queue.Empty:
                 continue  # timeout every 5 seconds to check if the thread should join
             except TimeoutError:
+                print('{}: send timeout'.format(self.__class__.__name__))
                 continue  # TODO: retry/log/etc, this happens when we fail to send data.
 
     def ctrl_loop(self):
@@ -242,22 +237,27 @@ class Link(ABC):
             try:
                 # get and unpack a new packet
                 packet = self.recv_queue.get(block=True, timeout=5)
+
+                # run the requested command
+                self.recv_opcodes[packet.get_code()](packet)
             except queue.Empty:
                 continue  # timeout every 5 seconds to check if the thread should join
-            except MalformedData:
+            except MalformedData as e:
+                print('{}: ctrl malformed data: {}'.format(self.__class__.__name__, str(e)))
                 continue  # we might want to log/debug/retry this eventually, for now ignore
-
-            # run the requested command
-            self.recv_opcodes[packet.code](packet)
 
     def start(self):
         self.running = True
         self.recv_thread.start()
         self.send_thread.start()
         self.ctrl_thread.start()
+        for c in self.cycles:
+            c.start()
 
     def stop(self):
         self.running = False
         self.recv_thread.join()
         self.send_thread.join()
         self.ctrl_thread.join()
+        for c in self.cycles:
+            c.join()

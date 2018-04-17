@@ -6,13 +6,10 @@ November 2017
 
 Intended to be a high level control of a bot 
 """
-import asyncio
-
 import swarm
 
 # load configuration
 config = swarm.config.load()
 
 bot = swarm.bot.Bot(config)
-
-asyncio.get_event_loop().run_until_complete(bot.run())
+bot.start()

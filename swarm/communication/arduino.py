@@ -1,11 +1,12 @@
 import struct
 from serial import Serial
-
 from .link import *
 
 
 class SendOp(OpCode):
     NEW_GPS = b'\0'
+    CONTROL = b'\1'
+    FORCE_DIRECTION = b'\2'
 
 
 class RecvOp(OpCode):
@@ -14,32 +15,58 @@ class RecvOp(OpCode):
     STATUS = b'\2'
     GPS = b'\3'
 
-fmts = {
-    RecvOp.ERROR: '',
-    RecvOp.DEBUG: '',
-    RecvOp.STATUS: '',
-    RecvOp.GPS: ''
-}
-
 
 class ArduinoPacket(Packet):
+    """
+    Pass fmt into constructor to override format used.
+    """
 
-    def __init__(self, *data, fmt=None):
-        super(ArduinoPacket, self).__init__(*data, fmt=fmt)
+    def pack(self):
+        if self.data is None:  # process data
 
-    def pack(self, fmt=None):
-        fmt = fmt or self.kwargs['fmt']
-        if fmt is None:
-            raise MalformedData("No fmt packed")
+            # ensure we have a code
+            if self.code is None:
+                raise MalformedData("No OpCode packed")
+
+            # ensure we have a format
+            try:
+                fmt = self.options['fmt']
+            except KeyError:
+                raise MalformedData("No Format to pack with")
+
+            # special 'string' case and general case.
+            # look up struct.pack for details on fmt string
+            if fmt == 'STRING':
+                self.data = self.code.value + self.values[0].encode('utf-8')
+            else:
+                self.data = self.code.value + struct.pack(fmt, *self.values)
+
+        # return data, whether we processed it now or earlier
+        return self.data
+
+    def get_code(self):
         if self.code is None:
-            raise MalformedData("No OpCode packed")
-        return self.code + struct.pack(fmt, *self.data)
+            self.code = RecvOp(self.data[:1])
+        return self.code
 
-    @classmethod
-    def unpack(cls, data):
-        fmt = fmts[RecvOp(data[0])]
-        # TODO: replace Packet unpack/pack logic with embedded functions in the enum
+    def unpack(self):
+        if len(self.values) == 0:  # if we have no values yet, process them
 
+            # ensure we have a format
+            try:
+                fmt = self.options['fmt']
+            except KeyError:
+                raise MalformedData("No Format to pack with")
+
+            # special 'string' case and general case.
+            # look up struct.pack for details on fmt string
+            if fmt == 'STRING':
+                self.values = [self.data[1:].decode('utf-8')]
+            else:
+                self.values = struct.unpack(fmt, self.data[1:])
+
+        # return values, whether we processed them now or earlier
+        return self.values
 
 
 class Arduino(Link):
@@ -49,34 +76,68 @@ class Arduino(Link):
 
     def __init__(self, bot, config):
         super(Arduino, self).__init__(bot, config)
-        self.serial = Serial(config['port'], config('baud'))
+        self.serial = Serial(self.config['port'], self.config['baud'], timeout=5)
 
-    def __wait_for_read(self, fmt):
-        """
-        Read data based on fmt (see python's struct.pack docs) ('=B' is always prepended)
-        """
-        return struct.unpack('=B' + fmt, self.serial.read(256))
+    def write(self, packet: Packet):
+        self.serial.write(packet.pack())  # get data from packet and send it
 
-    def __wait_for_write(self, fmt, *data):
-        """
-        Writes to the arduino
-        fmt is a format string specified in python's struct.pack docs ('=B' is always prepended)
-        any further arguments are passed as arguments to struct.pack
-        """
-        self.serial.write(struct.pack('=B' + fmt, *data))
+    def read(self):
+        b = b''  # buffer
+        while self.running:
+            v = self.serial.read()  # get a byte
+            b += v  # add it to the buffer
+            if v == b'\n':  # if this byte is a newline, we are done reading
+                return ArduinoPacket(data=b)
 
-    async def control(self, direction: int):
+    @send_op(SendOp.FORCE_DIRECTION, fmt='STRING')
+    def force_direction(self, direction: str):
         """
-        opcode 0
-        example send function. intended for direct bot control.
-        directions are laid out as on a numpad.
+        Debugging/testing method.
+        Forces the IR sensors on the bot to return that it should go in a specific direction.
         """
-        await self.write('B', 0, direction)  # B = unsigned char
+        assert direction in ['stop', 'forward', 'backward', 'left', 'right', 'auto']
+        return ArduinoPacket(direction)
 
+    @send_op(SendOp.CONTROL, fmt='<ff')
+    def control(self, left, right):
+        """
+        Set the bot's wheel velocities manually. left and right are 1-100 percentages
+        """
+        assert 1 < left < 100
+        assert 1 < right < 100
+        return ArduinoPacket(left / 100.0, right / 100.0)
 
-@Arduino.recv_op(0)
-async def telemetry(self, *data):
-    """
-    example telemetry reader. simply prints data
-    """
-    print(data)
+    @send_op(SendOp.NEW_GPS, fmt='ff')
+    def new_gps(self, lat, lon):
+        """
+        Set the bot's new gps goal.
+        """
+        return ArduinoPacket(lat, lon)
+
+    @recv_op(RecvOp.DEBUG, fmt='STRING')
+    def debug(self, s, **options):
+        """
+        Received debug info from bot. Simple echo.
+        """
+        print("DEBUG: {}".format(s), end='', flush=True)
+
+    @recv_op(RecvOp.ERROR, fmt='STRING')
+    def error(self, s, **options):
+        """
+        Received error info from bot. Simple echo.
+        """
+        print("ERROR: {}".format(s[0]), end='', flush=True)
+
+    @recv_op(RecvOp.STATUS, fmt='STRING')
+    def status(self, s, **options):
+        """
+        Received status info from bot. Simple echo.
+        """
+        print("STATUS: {}".format(s[0]), end='', flush=True)
+
+    @recv_op(RecvOp.GPS, fmt='ff')
+    def recv_gps(self, lat, lon, **options):
+        """
+        Received gps info from bot. Simple echo.
+        """
+        print("GPS: {}, {}".format(lat, lon), end='', flush=True)

@@ -14,15 +14,4 @@ class Network(Link):
         self.serial = Serial(config['port'], config['baud'])
         self.xbee = XBee(self.serial)
 
-    def __wait_for_read(self):
-        """
-        reads a data frame from the network.
-        """
-        frame = self.xbee.wait_read_frame()
-
-    def __wait_for_write(self, data, address=None):
-        """
-        Writes data to a specific address if one is specified.
-        If no address is specified, broadcast to the network.
-        """
-        self.xbee.tx(dest_addr=address, data=data)
+    # TODO: finish
