@@ -19,6 +19,6 @@ bot.arduino.new_gps(50.14063924666028, -90.94233550243678)
 while bot.running:
     time.sleep(8)
     state: str = random.choice(['stop', 'forward', 'backward', 'left', 'right', 'auto'])
-    print('STATE CHANGE: ' + state)
+    print('DIRECTION CHANGE: ' + state)
     bot.arduino.force_direction(state)
 
