@@ -80,7 +80,7 @@ class Network(Link):
     def read(self):
         try:
             d = self.xbee.wait_read_frame(timeout=5)
-            print('{} received {} from {}'.format(self.id, d['rf_data'], d['source_addr']))
+            # print('{} received {} from {}'.format(self.id, d['rf_data'], d['source_addr']))
             if d['source_addr'] == self.id:
                 print("ignored self message")
                 raise TimeoutError  # just to ignore messages from ourself
@@ -94,7 +94,7 @@ class Network(Link):
     def write(self, packet: XbeePacket):
         addr = packet.options['address'] or b'\xFF\xFF'
         d = packet.pack()
-        print("Sending {} to {} from {}".format(d, addr, self.id))
+        # print("Sending {} to {} from {}".format(d, addr, self.id))
         self.xbee.tx(dest_addr=addr, data=d)
 
     @send_op(Op.DEBUG, fmt='STRING')
@@ -126,5 +126,5 @@ class Network(Link):
         """
         Received a control command. Pass it along to the arduino.
         """
-        print("control received by {} from {}: {}, {}".format(self.id, address, left, right))
+        # print("control received by {} from {}: {}, {}".format(self.id, address, left, right))
         self.bot.arduino.control(left, right)

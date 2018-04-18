@@ -107,7 +107,7 @@ class Arduino(Link):
         """
         assert 0 < left < 200
         assert 0 < right < 200
-        print("Control command sent to arduino: {}, {}". format(left, right))
+        # print("Control command sent to arduino: {}, {}". format(left, right))
         return ArduinoPacket(left, right)
 
     @send_op(SendOp.NEW_GPS, fmt='ff')

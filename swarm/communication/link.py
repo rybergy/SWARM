@@ -212,8 +212,6 @@ class Link(ABC):
             # wait for a new packet, add it to the queue
             try:
                 self.recv_queue.put(self.read())
-                if hasattr(self, 'id'):
-                    print("command dequeued from {}".format(self.id))
             except TimeoutError:
                 # print('{}: recv timeout'.format(self.__class__.__name__))
                 continue  # timeout to check if the thread should join
