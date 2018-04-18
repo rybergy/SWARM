@@ -4,6 +4,7 @@ Tests the xbee link
 import time
 import random
 import swarm
+from collections import defaultdict
 
 # load configuration
 config = swarm.config.load()
@@ -14,9 +15,18 @@ n2 = swarm.communication.Network(None, config['xbee'])
 n2.start()
 
 while True:
-    time.sleep(3)
-    vals = [random.randrange(1, 200), random.randrange(1, 200)]
-    print("Sending control signal: {}".format(vals))
-    n2.send_control(*vals, address=b'\x00\x02')
+    x = input('direction: ')
+    vals = defaultdict(lambda: [100, 100])
+    vals.update({
+        'w': [200, 200],
+        'a': [50, 150],
+        's': [0, 0],
+        'd': [150, 50]
+    })
+    print(vals[x])
+    n2.send_control(*vals[x])
+
+
+
 
 

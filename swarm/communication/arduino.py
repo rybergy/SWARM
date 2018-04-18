@@ -105,8 +105,6 @@ class Arduino(Link):
         Set the bot's wheel velocities manually.
         left and right are 0-200 representing percentages. 0-99 is backward, 100 is stop, 101-200 is forward
         """
-        assert 0 < left < 200
-        assert 0 < right < 200
         # print("Control command sent to arduino: {}, {}". format(left, right))
         return ArduinoPacket(left, right)
 
