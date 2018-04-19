@@ -1,4 +1,5 @@
 import inspect
+import struct
 import threading
 import time
 import queue
@@ -9,7 +10,7 @@ from collections import defaultdict
 
 class OpCode(enum.Enum):
     """
-    Descriptive names and values for OpCodes. Values should be Opinfo
+    Descriptive names and values for OpCodes.
     """
 
     @classmethod
@@ -32,7 +33,8 @@ class MalformedData(BaseException):
 
 class Packet(ABC):
     """
-    data to be sent over a Link. extract values using .values and data to be sent using .pack()
+    data to be sent over a Link.
+    extract values using .values and data to be sent using .pack()
     """
 
     def __init__(self, *values, data=None, code=None, **options):
@@ -40,29 +42,58 @@ class Packet(ABC):
         self.options.update(options)
 
         # can be set later if needed
+        self.op_constructor = None
         self.code: OpCode = code
         self.data = data
         self.values = values
 
-    @abstractmethod
     def get_code(self):
-        """
-        Get and store opcode from data.
-        """
+        if self.code is None:
+            try:
+                self.code = self.op_constructor(self.data[:1])
+            except TypeError:
+                raise MalformedData
+        return self.code
 
-    @abstractmethod
-    def pack(self, *kwargs):
-        """
-        Return data to be sent in form expected by the Link
-        :raises MalformedData: if there is an error packing
-        """
+    def pack(self):
+        if self.data is None:
+            # ensure we have a format
+            try:
+                fmt = self.options['fmt']
+            except KeyError:
+                raise MalformedData('No Format to pack with')
 
-    @abstractmethod
-    def unpack(self, **kwargs):
-        """
-        Process a packet into it's values from data. updates internal values and returns them. kwargs are options.
-        :raises MalformedData: if there is an error unpacking
-        """
+            # special 'string', and 'nothing, cases and general case.
+            # look up struct.pack for details on fmt string
+            if fmt == 'STRING':
+                self.data = self.get_code().value + self.values[0].encode('utf-8')
+            elif fmt == 'NOTHING':
+                self.data = self.get_code().value
+            else:
+                self.data = self.get_code().value + struct.pack(fmt, *self.values)
+
+        # return data, whether we processed it now or earlier
+        return self.data
+
+    def unpack(self):
+        if len(self.values) == 0:  # if we have no values yet, process them
+            # ensure we have a format
+            try:
+                fmt = self.options['fmt']
+            except KeyError:
+                raise MalformedData("No Format to pack with")
+
+            # special 'string' case, 'nothing' case, and general case.
+            # look up struct.pack for details on fmt string
+            if fmt == 'STRING':
+                self.values = [self.data[1:].decode('utf-8')]
+            elif fmt == 'NOTHING':
+                self.values = []
+            else:
+                self.values = struct.unpack(fmt, self.data[1:])
+
+            # return values, whether we processed them now or earlier
+        return self.values
 
 
 class Cycle(threading.Thread):
@@ -104,7 +135,7 @@ class Cycle(threading.Thread):
             self.link.send_queue.put(self.func())
 
 
-def recv_op(code, **options):
+def recv_op(code: OpCode, **options):
     """
     Register a receive opcode in this Link. Usage:
     class Name(Link):
@@ -112,7 +143,7 @@ def recv_op(code, **options):
         def func(self, x, y, z):
             # respond to the data starting with opcode 0
 
-    When opcode EXAMPLEE is received, this function will be called.
+    When opcode EXAMPLE is received, this function will be called.
     The data interpreted according to the code is passed as arguments from Packet.unpack().
     kwargs/options passed will be updated in the packet.
     """
@@ -125,7 +156,7 @@ def recv_op(code, **options):
     return dec
 
 
-def send_op(code, **options):
+def send_op(code: OpCode, **options):
     """
     Register a send opcode in this Link. Usage:
     class Name(Link):
@@ -134,7 +165,7 @@ def send_op(code, **options):
             # process args ...
             return Packet(blah, blah, blah)
 
-    When Name.func is called, adding the opcode and putting it in the sendqueue will be handled.
+    When Name.func is called, adding the opcode and putting it in the send_queue will be handled.
     Func should return a Packet
     kwargs passed will be updated in the packet.
     """
@@ -162,8 +193,11 @@ class Link(ABC):
     cycles: [Cycle] = []
     recv_opcodes = {}
 
+    """This Type should be set in subclasses"""
+    ReceiveOpType: type(OpCode) = None
+
     @abstractmethod
-    async def read(self):
+    async def read(self) -> Packet:
         """
         This method should return data when it is received from the network. It should block until it gets data.
         The data returned should be the defined Packet.
@@ -211,7 +245,9 @@ class Link(ABC):
         while self.running:
             # wait for a new packet, add it to the queue
             try:
-                self.recv_queue.put(self.read())
+                p = self.read()
+                p.op_constructor = self.ReceiveOpType
+                self.recv_queue.put(p)
             except TimeoutError:
                 # print('{}: recv timeout'.format(self.__class__.__name__))
                 continue  # timeout to check if the thread should join

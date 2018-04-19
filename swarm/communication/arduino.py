@@ -1,4 +1,3 @@
-import struct
 from serial import Serial
 from .link import *
 
@@ -18,61 +17,12 @@ class RecvOp(OpCode):
     GPS = b'\4'
 
 
-class ArduinoPacket(Packet):
-    """
-    Pass fmt into constructor to override format used.
-    """
-
-    def pack(self):
-        if self.data is None:  # process data
-            # ensure we have a format
-            try:
-                fmt = self.options['fmt']
-            except KeyError:
-                raise MalformedData("No Format to pack with")
-
-            # special 'string', and 'nothing, cases and general case.
-            # look up struct.pack for details on fmt string
-            if fmt == 'STRING':
-                self.data = self.get_code().value + self.values[0].encode('utf-8')
-            elif fmt == 'NOTHING':
-                self.data = self.get_code().value
-            else:
-                self.data = self.get_code().value + struct.pack(fmt, *self.values)
-
-        # return data, whether we processed it now or earlier
-        return self.data
-
-    def get_code(self):
-        if self.code is None:
-            self.code = RecvOp(self.data[:1])
-        return self.code
-
-    def unpack(self):
-        if len(self.values) == 0:  # if we have no values yet, process them
-            # ensure we have a format
-            try:
-                fmt = self.options['fmt']
-            except KeyError:
-                raise MalformedData("No Format to pack with")
-
-            # special 'string' case, 'nothing' case, and general case.
-            # look up struct.pack for details on fmt string
-            if fmt == 'STRING':
-                self.values = [self.data[1:].decode('utf-8')]
-            elif fmt == 'NOTHING':
-                self.values = []
-            else:
-                self.values = struct.unpack(fmt, self.data[1:])
-
-        # return values, whether we processed them now or earlier
-        return self.values
-
-
 class Arduino(Link):
     """
     Handles communication with the Arduino.
     """
+
+    ReceiveOpType = RecvOp
 
     def __init__(self, bot, config):
         super(Arduino, self).__init__(bot, config)
@@ -88,7 +38,7 @@ class Arduino(Link):
             v = self.serial.read()  # get a byte
             b += v  # add it to the buffer
             if v == b'\n':  # if this byte is a newline, we are done reading
-                return ArduinoPacket(data=b)
+                return Packet(data=b)
 
     @send_op(SendOp.FORCE_DIRECTION, fmt='STRING')
     def force_direction(self, direction: str):
@@ -97,7 +47,7 @@ class Arduino(Link):
         Forces the IR sensors on the bot to return that it should go in a specific direction.
         """
         assert direction in ['stop', 'forward', 'backward', 'left', 'right', 'auto']
-        return ArduinoPacket(direction)
+        return Packet(direction)
 
     @send_op(SendOp.CONTROL, fmt='hh')
     def control(self, left: int, right: int):
@@ -106,14 +56,14 @@ class Arduino(Link):
         left and right are 0-200 representing percentages. 0-99 is backward, 100 is stop, 101-200 is forward
         """
         # print("Control command sent to arduino: {}, {}". format(left, right))
-        return ArduinoPacket(left, right)
+        return Packet(left, right)
 
     @send_op(SendOp.NEW_GPS, fmt='ff')
     def new_gps(self, lat: float, lon: float):
         """
         Set the bot's new gps goal.
         """
-        return ArduinoPacket(lat, lon)
+        return Packet(lat, lon)
 
     @send_op(SendOp.MODE, fmt='h')
     def set_mode(self, mode: int):
@@ -124,7 +74,7 @@ class Arduino(Link):
          1 - FOLLOW
          2 - MANUAL
         """
-        return ArduinoPacket(mode)
+        return Packet(mode)
 
     @recv_op(RecvOp.RECEIVED, fmt='NOTHING')
     def command_received(self, **_):
