@@ -15,18 +15,12 @@ n2 = swarm.communication.Network(None, config['xbee'])
 n2.start()
 
 while True:
-    x = input('direction: ')
+    x = input()
     vals = defaultdict(lambda: [100, 100])
     vals.update({
         'w': [200, 200],
-        'a': [50, 150],
+        'a': [150, 50],
         's': [0, 0],
-        'd': [150, 50]
+        'd': [50, 150]
     })
-    print(vals[x])
     n2.send_control(*vals[x])
-
-
-
-
-
