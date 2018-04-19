@@ -49,14 +49,15 @@ class Arduino(Link):
         assert direction in ['stop', 'forward', 'backward', 'left', 'right', 'auto']
         return Packet(direction)
 
-    @send_op(SendOp.CONTROL, fmt='hh')
-    def control(self, left: int, right: int):
+    @send_op(SendOp.CONTROL, fmt='fff')
+    def control(self, left: float, right: float, duration: float):
         """
         Set the bot's wheel velocities manually.
-        left and right are 0-200 representing percentages. 0-99 is backward, 100 is stop, 101-200 is forward
+        left and right are floats in the range +-1, percentage of velocity for each side.
+        duration is the duration this command should be run for on the arduino (in seconds).
         """
         # print("Control command sent to arduino: {}, {}". format(left, right))
-        return Packet(left, right)
+        return Packet(left, right, duration)
 
     @send_op(SendOp.NEW_GPS, fmt='ff')
     def new_gps(self, lat: float, lon: float):

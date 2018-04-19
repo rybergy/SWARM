@@ -58,25 +58,27 @@ class Network(Link):
         """
         return Packet(message, address=address)
 
-    @send_op(Op.CONTROL, fmt='hh')
-    def send_control(self, left, right, address=None):
+    @send_op(Op.CONTROL, fmt='fff')
+    def send_control(self, left: float, right: float, duration: float, address=None):
         """
         Send a control command to a specific address.
         If no address is specified, broadcasts to all.
+        left and right are floats between +-1, percentages of max velocity for each side.
+        duration is a float determining how long the command is run on the arduino (in seconds).
         """
-        return Packet(left, right, address=address)
+        return Packet(left, right, duration, address=address)
 
     @recv_op(Op.DEBUG, fmt='STRING')
-    def recv_debug(self, message, address=None, **_):
+    def recv_debug(self, message: str, address=None, **_):
         """
         Received a debug message from another xbee.
         For now, simple stdout echo.
         """
         print("DEBUG from({}): {}".format(address, message))
 
-    @recv_op(Op.CONTROL, fmt='hh')
-    def recv_control(self, left: int, right: int, **_):
+    @recv_op(Op.CONTROL, fmt='fff')
+    def recv_control(self, left: float, right: float, duration: float, **_):
         """
         Received a control command. Pass it along to the arduino.
         """
-        self.bot.arduino.control(left, right)
+        self.bot.arduino.control(left, right, duration)
