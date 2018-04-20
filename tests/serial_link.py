@@ -28,3 +28,6 @@ while False:
     print('DIRECTION CHANGE: ' + state)
     a.force_direction(state)
 
+time.sleep(5)  # delay to let backround threads finish processing the commands and let the arduino catch up
+a.stop()
+

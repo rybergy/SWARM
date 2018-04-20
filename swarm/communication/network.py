@@ -25,6 +25,10 @@ class Network(Link):
         self.id = self.at('MY')
         self.name = self.at('NI').decode('utf-8')
 
+    def stop(self):
+        super(Network, self).stop()
+        self.serial.close()
+
     def at(self, command):
         """Helper method for getting AT data from xbee"""
         self.xbee.at(frame_id='A', command=command)

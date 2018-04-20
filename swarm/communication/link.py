@@ -246,8 +246,9 @@ class Link(ABC):
             # wait for a new packet, add it to the queue
             try:
                 p = self.read()
-                p.op_constructor = self.ReceiveOpType
-                self.recv_queue.put(p)
+                if p is not None:
+                    p.op_constructor = self.ReceiveOpType
+                    self.recv_queue.put(p)
             except TimeoutError:
                 # print('{}: recv timeout'.format(self.__class__.__name__))
                 continue  # timeout to check if the thread should join

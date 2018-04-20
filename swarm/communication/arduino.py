@@ -28,6 +28,10 @@ class Arduino(Link):
         super(Arduino, self).__init__(bot, config)
         self.serial = Serial(self.config['port'], self.config['baud'], timeout=5)
 
+    def stop(self):
+        super(Arduino, self).stop()
+        self.serial.close()
+
     def write(self, packet: Packet):
         self.serial.write(packet.pack())  # get data from packet and send it
         self.ready_to_send = False
