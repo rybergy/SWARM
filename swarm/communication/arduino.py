@@ -3,18 +3,18 @@ from .link import *
 
 
 class SendOp(OpCode):
-    NEW_GPS = b'\0'
-    CONTROL = b'\1'
-    FORCE_DIRECTION = b'\2'
-    MODE = b'\3'
+    NEW_GPS = b'\1'
+    CONTROL = b'\2'
+    FORCE_DIRECTION = b'\3'
+    MODE = b'\4'
 
 
 class RecvOp(OpCode):
-    RECEIVED = b'\0'
-    ERROR = b'\1'
-    DEBUG = b'\2'
-    STATUS = b'\3'
-    GPS = b'\4'
+    RECEIVED = b'\1'
+    ERROR = b'\2'
+    DEBUG = b'\3'
+    STATUS = b'\4'
+    GPS = b'\5'
 
 
 class Arduino(Link):
