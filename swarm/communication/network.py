@@ -62,6 +62,28 @@ class Network(Link):
         """
         return Packet(message, address=address)
 
+    @recv_op(Op.DEBUG, fmt='STRING')
+    def recv_debug(self, message: str, address=None, **_):
+        """
+        Received a debug message from another xbee.
+        For now, simple stdout echo.
+        """
+        print("DEBUG from({}): {}".format(address, message))
+
+    @send_op(Op.RECEIVED, fmt='NOTHING')
+    def send_received(self):
+        """
+        Tell another Xbee that we received a valid packet.
+        """
+        # TODO
+
+    @recv_op(Op.RECEIVED, fmt='NOTHING')
+    def recv_received(self, **_):
+        """
+        Received a RECEIVE message from another xbee.
+        """
+        # TODO
+
     @send_op(Op.CONTROL, fmt='fff')
     def send_control(self, left: float, right: float, duration: float, address=None):
         """
@@ -71,14 +93,6 @@ class Network(Link):
         duration is a float determining how long the command is run on the arduino (in seconds).
         """
         return Packet(left, right, duration, address=address)
-
-    @recv_op(Op.DEBUG, fmt='STRING')
-    def recv_debug(self, message: str, address=None, **_):
-        """
-        Received a debug message from another xbee.
-        For now, simple stdout echo.
-        """
-        print("DEBUG from({}): {}".format(address, message))
 
     @recv_op(Op.CONTROL, fmt='fff')
     def recv_control(self, left: float, right: float, duration: float, **_):
