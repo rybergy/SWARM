@@ -1,0 +1,5 @@
+arduino: {baud: 115200, port: /dev/ttyUSB0}
+xbee:
+  addresses: []
+  baud: 57600
+  port: /dev/ttyUSB0
