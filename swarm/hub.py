@@ -29,6 +29,7 @@ class Hub:
 
     @property
     def bot(self):
+        """shortcut to this bot's data"""
         return self[self.network.id]
 
     def start(self):
