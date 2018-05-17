@@ -10,13 +10,13 @@ class Bot:
         self.id = bot_id
         self.lat = lat
         self.lon = lon
-        self.battery = altitude
+        self.battery = battery
         self.altitude = altitude
 
     def update_info(self, lat, lon, battery, altitude):
         self.lat = lat
         self.lon = lon
-        self.battery = altitude
+        self.battery = battery
         self.altitude = altitude
 
     def move_forward(self):
