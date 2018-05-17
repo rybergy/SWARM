@@ -104,8 +104,12 @@ class Network(Link):
         self.hub.arduino.control(left, right, duration)
 
     @send_op(Op.STATUS, fmt='ifffi')
-    def send_status(self, lat: float, lon: float, alt: float, battery: int):
-        return Packet(int(self.id), lat, lon, alt, battery)
+    def send_status(self):
+        return Packet(
+            int(self.id),
+            self.hub.bot.lat, self.hub.bot.lon,
+            self.hub.bot.alt, self.hub.bot.battery
+        )
 
     @recv_op(Op.STATUS, fmt='ifffi')
     def recv_status(self, id: int, lat: float, lon: float, alt: float, battery: int):
@@ -117,5 +121,4 @@ class Network(Link):
 
     @recv_op(Op.REQUESTSTATUS, fmt='NOTHING')
     def recv_req_status(self, address=None, **_):
-        pass
-        # self.send_status(address=address)
+        self.send_status(address=address)
