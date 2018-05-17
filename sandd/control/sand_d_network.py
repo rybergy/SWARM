@@ -2,7 +2,7 @@ from swarm.communication.network import Network
 from swarm.communication import Cycle
 from swarm.communication.link import recv_op, send_op
 import swarm
-from .bot import Bot
+from .bot import CommandBot
 
 
 class SANDDNetwork(Network):
@@ -20,4 +20,4 @@ class SANDDNetwork(Network):
         if id in self.bots:
             self.bots[bot_id].update_info(lat, lon, alt, battery)
         else:
-            self.bots[bot_id] = Bot(bot_id, lat, lon, alt, battery)
+            self.bots[bot_id] = CommandBot(bot_id, lat, lon, alt, battery)

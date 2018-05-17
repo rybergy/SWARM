@@ -101,7 +101,7 @@ class Network(Link):
         """
         Received a control command. Pass it along to the arduino.
         """
-        self.bot.arduino.control(left, right, duration)
+        self.hub.arduino.control(left, right, duration)
 
     @send_op(Op.STATUS, fmt='ifffi')
     def send_status(self, lat: float, lon: float, alt: float, battery: int):
@@ -109,7 +109,7 @@ class Network(Link):
 
     @recv_op(Op.STATUS, fmt='ifffi')
     def recv_status(self, id: int, lat: float, lon: float, alt: float, battery: int):
-        pass # TODO
+        pass  # TODO
 
     @send_op(Op.REQUESTSTATUS, fmt='NOTHING')
     def send_req_status(self):

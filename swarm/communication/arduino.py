@@ -115,3 +115,5 @@ class Arduino(Link):
         Received gps info from bot. Simple echo.
         """
         print("GPS: {}, {}".format(lat, lon), end='', flush=True)
+        self.hub.bot.lat = lat
+        self.hub.bot.lon = lon

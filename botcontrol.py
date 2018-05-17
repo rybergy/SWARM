@@ -11,5 +11,5 @@ import swarm
 # load configuration
 config = swarm.config.load()
 
-bot = swarm.bot.Bot(config)
+bot = swarm.bot.Hub(config)
 bot.start()

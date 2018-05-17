@@ -13,7 +13,7 @@ config1['arduino']['port'] = 'COM6'
 config2 = swarm.config.load()
 config2['xbee']['port'] = 'COM8'
 
-bot = swarm.bot.Bot(config1)
+bot = swarm.bot.Hub(config1)
 n2 = swarm.communication.Network(bot, config2['xbee'])
 
 print('name address')

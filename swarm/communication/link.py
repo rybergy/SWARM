@@ -211,8 +211,8 @@ class Link(ABC):
         :raises TimeoutError: if blocking for too long. (important to terminate thread)
         """
 
-    def __init__(self, bot, config):
-        self.bot = bot
+    def __init__(self, hub, config):
+        self.hub = hub
         self.config = config
         self.send_queue = queue.Queue()
         self.recv_queue = queue.Queue()
