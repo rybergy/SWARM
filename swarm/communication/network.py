@@ -112,8 +112,9 @@ class Network(Link):
         )
 
     @recv_op(Op.STATUS, fmt='ifffi')
-    def recv_status(self, id: int, lat: float, lon: float, alt: float, battery: int):
-        pass  # TODO
+    def recv_status(self, bot_id: int, lat: float, lon: float, alt: float, battery: int):
+        print("Updated {} data".format(bot_id))
+        self.hub[bot_id].update_info(lat, lon, alt, battery)
 
     @send_op(Op.REQUESTSTATUS, fmt='NOTHING')
     def send_req_status(self):
