@@ -4,6 +4,7 @@ defines the main hub class, which handles main program flow and accessing data b
 
 from swarm.communication import *
 from .bot import Bot
+import time
 
 
 class Hub:
@@ -36,6 +37,9 @@ class Hub:
         self.running = True
         self.network.start()
         self.arduino.start()
+
+        time.sleep(1)  # wait so the networks can startup
+        self.network.send_debug("INIT DONE")
 
     def stop(self):
         self.running = False
