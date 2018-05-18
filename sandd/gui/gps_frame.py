@@ -16,16 +16,19 @@ class GPSFrame(Frame):
         Frame.__init__(self)
         self.bots = bots
         print(self.bots)
+        self.texts = []
         self.update_camera()
         plt.ion()
 
-        fig = plt.figure()
+        self.fig = plt.figure()
 
-        self.ax = fig.add_subplot(111)
+        self.ax = self.fig.add_subplot(111)
         self.main_map = Basemap(resolution='c',
                                 projection='cyl',
-                                llcrnrlon=self.min_lon, llcrnrlat=self.min_lat,  # Lower left lat/lon
-                                urcrnrlon=self.max_lon, urcrnrlat=self.max_lat)  # Upper right lat/lon
+                                #llcrnrlon=self.min_lon, llcrnrlat=self.min_lat,  # Lower left lat/lon
+                                #urcrnrlon=self.max_lon, urcrnrlat=self.max_lat)  # Upper right lat/lon
+                                llcrnrlon = -90, llcrnrlat = -90,  # Lower left lat/lon
+                                urcrnrlon = 90, urcrnrlat = 90)  # Upper right lat/lon
 
         self.main_map.readshapefile("resources/UScounties", "areas")
         self.main_map.shadedrelief()
@@ -33,7 +36,7 @@ class GPSFrame(Frame):
         self.plot_bots()
         plt.show()
 
-        self.canvas = FigureCanvasTkAgg(fig, master=self)
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self)
         self.canvas.get_tk_widget().pack()
 
     # This method centers the camera around all bots.
@@ -75,7 +78,8 @@ class GPSFrame(Frame):
         self.xpoints, = self.ax.plot(x, y, 'ro', markersize=6)
         for bot_id in self.bots:
             bot = self.bots[bot_id]
-            plt.text(bot.lon, bot.lat, str(bot.id), fontsize=8)
+            text = plt.text(bot.lon, bot.lat, str(bot.id), fontsize=8)
+            self.texts.append(text)
 
     def update_bots(self, bots):
         self.bots = bots
@@ -84,6 +88,14 @@ class GPSFrame(Frame):
         x = self.get_lons()
         y = self.get_lats()
         self.xpoints.set_data(x, y)
+        for i in range(len(self.texts)):
+            self.texts[0].set_visible(False)
+            self.texts.remove(self.texts[0])
+        for bot_id in self.bots:
+            bot = self.bots[bot_id]
+            text = plt.text(bot.lon, bot.lat, str(bot.id), fontsize=8)
+            text.set_visible(True)
+            self.texts.append(text)
         self.canvas.draw()
 
     def get_lats(self):

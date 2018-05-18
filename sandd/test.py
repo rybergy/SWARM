@@ -13,7 +13,7 @@ import time
 
 bot_list = {}
 for i in range(0, 20):
-    bot_list[i] = CommandBot(None, i, i*3, i*3, i*2, i*5)
+    bot_list[i] = CommandBot(None, i, i*3, i*5, i*2, i*5)
 
 
 class MainWindow(Tk):
