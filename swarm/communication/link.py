@@ -58,9 +58,8 @@ class Packet(ABC):
     def pack(self):
         if self.data is None:
             # ensure we have a format
-            try:
-                fmt = self.options['fmt']
-            except KeyError:
+            fmt: str = self.options['fmt']
+            if fmt is None:
                 raise MalformedData('No Format to pack with')
 
             # special 'string', and 'nothing, cases and general case.
@@ -78,9 +77,8 @@ class Packet(ABC):
     def unpack(self):
         if len(self.values) == 0:  # if we have no values yet, process them
             # ensure we have a format
-            try:
-                fmt = self.options['fmt']
-            except KeyError:
+            fmt: str = self.options['fmt']
+            if fmt is None:
                 raise MalformedData("No Format to pack with")
 
             # special 'string' case, 'nothing' case, and general case.
@@ -116,23 +114,15 @@ class Cycle(threading.Thread):
         return dec
 
     def __init__(self, delay, func):
+        super(Cycle, self).__init__(name=func.__qualname__)
         self.delay = delay
         self.func = func
-        try:
-            self.link = func.__self__
-            self.link.cycles.append(self)
-            self.name = "{}: cycle {}".format(
-                func.__self__.__class__.__name__,
-                func.__name__
-            )
-        except AttributeError:
-            raise TypeError("Cycle function must be a bound method of a class")
-        super(Cycle, self).__init__(name=self.name)
+        self.link = None
 
     def run(self):
         while self.link.running:
             time.sleep(self.delay)
-            self.link.send_queue.put(self.func())
+            self.func(self.link)
 
 
 def recv_op(code: OpCode, **options):
@@ -240,6 +230,9 @@ class Link(ABC):
         for name, member in inspect.getmembers(self):
             if hasattr(member, 'code'):
                 self.recv_opcodes[member.code] = member
+            if isinstance(member, Cycle):
+                member.link = self
+                self.cycles.append(member)
 
     def recv_loop(self):
         while self.running:
