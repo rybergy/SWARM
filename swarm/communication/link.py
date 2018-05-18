@@ -132,7 +132,7 @@ class Cycle(threading.Thread):
     def run(self):
         while self.link.running:
             time.sleep(self.delay)
-            self.link.send_queue.put(self.func())
+            self.func()
 
 
 def recv_op(code: OpCode, **options):
