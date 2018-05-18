@@ -17,10 +17,11 @@ class GPSFrame(Frame):
         self.bots = bots
         print(self.bots)
         self.update_camera()
+        plt.ion()
 
-        fig = Figure()
+        fig = plt.figure()
 
-        ax = plt.subplots(figsize=(15, 10))
+        self.ax = fig.add_subplot(111)
         self.main_map = Basemap(resolution='c',
                                 projection='cyl',
                                 llcrnrlon=self.min_lon, llcrnrlat=self.min_lat,  # Lower left lat/lon
@@ -32,8 +33,8 @@ class GPSFrame(Frame):
         self.plot_bots()
         plt.show()
 
-        canvas = FigureCanvasTkAgg(fig, master=self)
-        canvas.get_tk_widget().pack()
+        self.canvas = FigureCanvasTkAgg(fig, master=self)
+        self.canvas.get_tk_widget().pack()
 
     # This method centers the camera around all bots.
     def update_camera(self):
@@ -71,7 +72,7 @@ class GPSFrame(Frame):
 
     def plot_bots(self):
         x,y = self.main_map(self.get_lons(), self.get_lats())
-        self.points = self.main_map.plot(x, y, 'ro', markersize=6)
+        self.xpoints, = self.ax.plot(x, y, 'ro', markersize=6)
         for bot_id in self.bots:
             bot = self.bots[bot_id]
             plt.text(bot.lon, bot.lat, str(bot.id), fontsize=8)
@@ -80,6 +81,10 @@ class GPSFrame(Frame):
         self.bots = bots
         self.update_camera()
         #self.plot_bots()
+        x = self.get_lons()
+        y = self.get_lats()
+        self.xpoints.set_data(x, y)
+        self.canvas.draw()
 
     def get_lats(self):
         lats = []
