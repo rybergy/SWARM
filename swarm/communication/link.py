@@ -58,9 +58,8 @@ class Packet(ABC):
     def pack(self):
         if self.data is None:
             # ensure we have a format
-            try:
-                fmt = self.options['fmt']
-            except KeyError:
+            fmt: str = self.options['fmt']
+            if fmt is None:
                 raise MalformedData('No Format to pack with')
 
             # special 'string', and 'nothing, cases and general case.
@@ -78,9 +77,8 @@ class Packet(ABC):
     def unpack(self):
         if len(self.values) == 0:  # if we have no values yet, process them
             # ensure we have a format
-            try:
-                fmt = self.options['fmt']
-            except KeyError:
+            fmt: str = self.options['fmt']
+            if fmt is None:
                 raise MalformedData("No Format to pack with")
 
             # special 'string' case, 'nothing' case, and general case.
