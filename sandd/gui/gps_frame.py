@@ -7,6 +7,7 @@ from tkinter import Frame
 from mpl_toolkits.basemap import Basemap
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 
 
 class GPSFrame(Frame):
@@ -14,21 +15,24 @@ class GPSFrame(Frame):
     def __init__(self, bots):
         Frame.__init__(self)
         self.bots = bots
+        print(self.bots)
         self.update_camera()
 
-        self.fig, ax = plt.subplots(figsize=(15, 10))
+        fig = Figure()
+
+        ax = plt.subplots(figsize=(15, 10))
         self.main_map = Basemap(resolution='c',
                                 projection='cyl',
-                                llcrnrlon=-80, llcrnrlat=-80,  # Lower left lat/lon
-                                urcrnrlon=80, urcrnrlat=80)  # Upper right lat/lon
+                                llcrnrlon=self.min_lon, llcrnrlat=self.min_lat,  # Lower left lat/lon
+                                urcrnrlon=self.max_lon, urcrnrlat=self.max_lat)  # Upper right lat/lon
 
-        self.main_map.readshapefile("UScounties", "areas")
+        self.main_map.readshapefile("resources/UScounties", "areas")
         self.main_map.shadedrelief()
 
         self.plot_bots()
         plt.show()
 
-        canvas = FigureCanvasTkAgg(self.fig, master=self)
+        canvas = FigureCanvasTkAgg(fig, master=self)
         canvas.get_tk_widget().pack()
 
     # This method centers the camera around all bots.
@@ -70,22 +74,30 @@ class GPSFrame(Frame):
         self.points = self.main_map.plot(x, y, 'ro', markersize=6)
         for bot_id in self.bots:
             bot = self.bots[bot_id]
-            plt.text(bot.lon, bot.lat, str(bot.uuid), fontsize=8)
+            plt.text(bot.lon, bot.lat, str(bot.id), fontsize=8)
+
+    def update_bots(self, bots):
+        self.bots = bots
+        self.update_camera()
+        #self.plot_bots()
 
     def get_lats(self):
         lats = []
-        for bot in self.bots:
+        for bot_id in self.bots:
+            bot = self.bots[bot_id]
             lats.append(bot.lat)
         return lats
 
     def get_ids(self):
         ids = []
-        for bot in self.bots:
+        for bot_id in self.bots:
+            bot = self.bots[bot_id]
             ids.append(bot.id)
         return ids
 
     def get_lons(self):
         lons = []
-        for bot in self.bots:
+        for bot_id in self.bots:
+            bot = self.bots[bot_id]
             lons.append(bot.lon)
         return lons

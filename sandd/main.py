@@ -4,6 +4,7 @@ Left frame is a list of bots, right frame is a GPS frame.
 """
 
 from gui.bot_list_frame import BotListFrame
+from gui.gps_frame import GPSFrame
 from control.sand_d_network import SANDDNetwork
 from tkinter import *
 

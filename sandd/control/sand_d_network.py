@@ -2,7 +2,7 @@ from swarm.communication.network import Network
 from swarm.communication import Cycle
 from swarm.communication.link import recv_op, send_op
 import swarm
-from .bot import CommandBot
+from .commandbot import CommandBot
 
 
 class SANDDNetwork(Network):
