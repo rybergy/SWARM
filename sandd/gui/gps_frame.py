@@ -84,7 +84,6 @@ class GPSFrame(Frame):
     def update_bots(self, bots):
         self.bots = bots
         self.update_camera()
-        #self.plot_bots()
         x = self.get_lons()
         y = self.get_lats()
         self.xpoints.set_data(x, y)
