@@ -30,5 +30,13 @@ class MainWindow(Tk):
         # self.right_frame.pack(side=RIGHT)
 
 
+def update_gui():
+    bot_list = network.bots
+    a.left_frame.update_bots(bot_list)
+    a.right_frame.update_bots(bot_list)
+    a.after(1000, update_gui)
+
+
 a = MainWindow()
+a.after(1000, update_gui)
 a.mainloop()

@@ -88,14 +88,10 @@ class GPSFrame(Frame):
         x = self.get_lons()
         y = self.get_lats()
         self.xpoints.set_data(x, y)
-        for i in range(len(self.texts)):
-            self.texts[0].set_visible(False)
-            self.texts.remove(self.texts[0])
-        for bot_id in self.bots:
-            bot = self.bots[bot_id]
-            text = plt.text(bot.lon, bot.lat, str(bot.id), fontsize=8)
-            text.set_visible(True)
-            self.texts.append(text)
+        itr = 0
+        for text in self.texts:
+            text.set_position((x[itr], y[itr]))
+            itr += 1
         self.canvas.draw()
 
     def get_lats(self):

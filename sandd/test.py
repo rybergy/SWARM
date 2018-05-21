@@ -28,7 +28,6 @@ class MainWindow(Tk):
         self.left_frame = BotListFrame(bot_list)
         self.left_frame.pack(fill=Y, side=LEFT)
 
-        #Disabled for now because it's really slow
         self.right_frame = GPSFrame(bot_list)
         self.right_frame.pack(side=RIGHT)
 
